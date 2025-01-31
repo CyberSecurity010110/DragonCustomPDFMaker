@@ -1,20 +1,23 @@
 import os
-
-# Disable MTDev and other unnecessary input providers
-os.environ["KIVY_NO_ARGS"] = "1"
-os.environ["KIVY_METRICS_DENSITY"] = "1"
-os.environ["KIVY_NO_MTDEV"] = "1"
-
 from kivy.config import Config
-Config.set('input', 'mtdev', 'none')  # Disable MTDev input provider
-
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.button import Button
 from kivy.uix.textinput import TextInput
 from kivy.uix.filechooser import FileChooserListView
+from kivy.uix.label import Label
+from kivy.uix.switch import Switch
+from kivy.uix.popup import Popup
+from kivy.core.clipboard import Clipboard
+from kivy.uix.spinner import Spinner
+from kivy.uix.checkbox import CheckBox
+from kivy.uix.scrollview import ScrollView
+from kivy.uix.progressbar import ProgressBar
+from kivy.uix.colorpicker import ColorPicker
 from fpdf import FPDF
 import platform
+import enchant
+from enchant.checker import SpellChecker
 
 class PDFCreatorApp(App):
     def build(self):
@@ -28,12 +31,16 @@ class PDFCreatorApp(App):
 
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
+        # Title input for adding titles to the PDF
+        self.title_input = TextInput(multiline=False, hint_text='Enter title here', size_hint_y=None, height=40)
+        layout.add_widget(self.title_input)
+
         # Text input for adding text to the PDF
-        self.text_input = TextInput(multiline=True, hint_text='Enter text here')
+        self.text_input = TextInput(multiline=True, hint_text='Enter text here', size_hint_y=0.4)
         layout.add_widget(self.text_input)
 
         # File chooser for selecting images
-        self.file_chooser = FileChooserListView(path=self.default_dir)
+        self.file_chooser = FileChooserListView(path=self.default_dir, size_hint_y=0.2)
         layout.add_widget(self.file_chooser)
 
         # Buttons for actions
@@ -54,6 +61,38 @@ class PDFCreatorApp(App):
 
         layout.add_widget(button_layout)
 
+        # Light/Dark mode switch
+        mode_layout = BoxLayout(size_hint_y=None, height=40, spacing=10)
+        mode_label = Label(text='Light Mode')
+        self.mode_switch = Switch(active=True)
+        self.mode_switch.bind(active=self.toggle_mode)
+        mode_layout.add_widget(mode_label)
+        mode_layout.add_widget(self.mode_switch)
+        layout.add_widget(mode_layout)
+
+        # PDF size estimation
+        self.size_label = Label(text='Estimated PDF size: 0 KB')
+        layout.add_widget(self.size_label)
+
+        # Spell check button
+        spell_check_btn = Button(text='Check Spelling', size_hint_y=None, height=40)
+        spell_check_btn.bind(on_press=self.check_spelling)
+        layout.add_widget(spell_check_btn)
+
+        # Edit pages button
+        edit_pages_btn = Button(text='Edit Pages', size_hint_y=None, height=40)
+        edit_pages_btn.bind(on_press=self.edit_pages)
+        layout.add_widget(edit_pages_btn)
+
+        # Progress bar for large file operations
+        self.progress_bar = ProgressBar(max=100, value=0, size_hint_y=None, height=20)
+        layout.add_widget(self.progress_bar)
+
+        # Color picker for text color
+        color_picker_btn = Button(text='Choose Text Color', size_hint_y=None, height=40)
+        color_picker_btn.bind(on_press=self.choose_text_color)
+        layout.add_widget(color_picker_btn)
+
         return layout
 
     def get_default_directory(self):
@@ -69,10 +108,17 @@ class PDFCreatorApp(App):
 
     def add_text(self, instance):
         """Add text from the input box to the PDF."""
+        title = self.title_input.text.strip()
         text = self.text_input.text.strip()
+        if title:
+            self.pdf.set_font("Arial", 'B', 12)
+            self.pdf.cell(0, 10, title, ln=True)
+            self.title_input.text = ''  # Clear the title input box
         if text:
+            self.pdf.set_font("Arial", size=12)
             self.pdf.multi_cell(0, 10, text)
             self.text_input.text = ''  # Clear the input box
+            self.update_pdf_size()
 
     def add_image(self, selection):
         """Add an image to the PDF from the selected file."""
@@ -82,22 +128,107 @@ class PDFCreatorApp(App):
                 try:
                     self.pdf.add_page()
                     self.pdf.image(image_path, x=10, y=None, w=190)  # Adjust width as needed
+                    self.update_pdf_size()
                 except Exception as e:
                     print(f"Failed to add image: {e}")
 
     def save_pdf(self, instance):
         """Save the PDF to the default directory."""
-        output_file = os.path.join(self.default_dir, "custom_document.pdf")
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        file_name_input = TextInput(hint_text='Enter file name', multiline=False)
+        content.add_widget(file_name_input)
+        save_btn = Button(text='Save', size_hint_y=None, height=40)
+        content.add_widget(save_btn)
+
+        popup = Popup(title='Save PDF', content=content, size_hint=(0.9, 0.5))
+        save_btn.bind(on_press=lambda x: self.save_pdf_to_location(file_name_input.text, popup))
+        popup.open()
+
+    def save_pdf_to_location(self, file_name, popup):
+        if not file_name:
+            file_name = "custom_document"
+        output_file = os.path.join(self.default_dir, f"{file_name}.pdf")
         try:
             self.pdf.output(output_file)
             print(f"PDF saved as {output_file}")
+            popup.dismiss()
         except Exception as e:
             print(f"Failed to save PDF: {e}")
 
-if __name__ == '__main__':
-    PDFCreatorApp().run()
-    Exception as e:
-            print(f"Failed to save PDF: {e}")
+    def toggle_mode(self, instance, value):
+        if value:
+            self.root_window.background_color = (1, 1, 1, 1)  # Light mode
+            self.update_ui_mode('light')
+        else:
+            self.root_window.background_color = (0, 0, 0, 1)  # Dark mode
+            self.update_ui_mode('dark')
+
+    def update_ui_mode(self, mode):
+        """Update the UI elements to match the selected mode."""
+        if mode == 'light':
+            self.title_input.background_color = (1, 1, 1, 1)
+            self.title_input.foreground_color = (0, 0, 0, 1)
+            self.text_input.background_color = (1, 1, 1, 1)
+            self.text_input.foreground_color = (0, 0, 0, 1)
+        else:
+            self.title_input.background_color = (0, 0, 0, 1)
+            self.title_input.foreground_color = (1, 1, 1, 1)
+            self.text_input.background_color = (0, 0, 0, 1)
+            self.text_input.foreground_color = (1, 1, 1, 1)
+
+    def update_pdf_size(self):
+        # Estimate PDF size (this is a rough estimation)
+        size_kb = len(self.pdf.buffer) / 1024
+        self.size_label.text = f'Estimated PDF size: {size_kb:.2f} KB'
+
+    def check_spelling(self, instance):
+        """Check spelling in the text input."""
+        text = self.text_input.text.strip()
+        if text:
+            chkr = SpellChecker("en_US")
+            chkr.set_text(text)
+            for err in chkr:
+                print(f"Misspelled word: {err.word}")
+                suggestions = ", ".join(err.suggest())
+                print(f"Suggestions: {suggestions}")
+
+    def edit_pages(self, instance):
+        """Edit pages after they are created."""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        edit_text_input = TextInput(multiline=True, hint_text='Edit text here')
+        content.add_widget(edit_text_input)
+        save_btn = Button(text='Save Changes', size_hint_y=None, height=40)
+        content.add_widget(save_btn)
+
+        popup = Popup(title='Edit Pages', content=content, size_hint=(0.9, 0.9))
+        save_btn.bind(on_press=lambda x: self.save_page_edits(edit_text_input.text, popup))
+        popup.open()
+
+    def save_page_edits(self, text, popup):
+        """Save page edits."""
+        if text:
+            self.pdf.add_page()
+            self.pdf.set_font("Arial", size=12)
+            self.pdf.multi_cell(0, 10, text)
+            self.update_pdf_size()
+            popup.dismiss()
+
+    def choose_text_color(self, instance):
+        """Open a color picker to choose text color."""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        color_picker = ColorPicker()
+        content.add_widget(color_picker)
+        select_btn = Button(text='Select', size_hint_y=None, height=40)
+        content.add_widget(select_btn)
+
+        popup = Popup(title='Choose Text Color', content=content, size_hint=(0.9, 0.9))
+        select_btn.bind(on_press=lambda x: self.set_text_color(color_picker.color, popup))
+        popup.open()
+
+    def set_text_color(self, color, popup):
+        """Set the selected text color."""
+        self.text_color = color
+        popup.dismiss()
 
 if __name__ == '__main__':
     PDFCreatorApp().run()
