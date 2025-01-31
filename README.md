@@ -30,7 +30,7 @@ Custom PDF Maker is a user-friendly application designed to create custom PDFs w
 
 1. **Clone the Repository**:
     
-    git clone https://github.com/yourusername/custompdfmaker.git
+    git clone https://github.com/CyberSecurity010110/custompdfmaker.git
     cd custompdfmaker
     
 
