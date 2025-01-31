@@ -14,10 +14,20 @@ from kivy.uix.checkbox import CheckBox
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.progressbar import ProgressBar
 from kivy.uix.colorpicker import ColorPicker
+from kivy.uix.behaviors import FocusBehavior
+from kivy.uix.textinput import TextInput
+from kivy.core.window import Window
 from fpdf import FPDF
 import platform
 import enchant
 from enchant.checker import SpellChecker
+
+class CustomTextInput(FocusBehavior, TextInput):
+    def keyboard_on_key_down(self, window, keycode, text, modifiers):
+        if keycode[1] == 'v' and 'ctrl' in modifiers:
+            self.insert_text(Clipboard.paste())
+        else:
+            super(CustomTextInput, self).keyboard_on_key_down(window, keycode, text, modifiers)
 
 class PDFCreatorApp(App):
     def build(self):
@@ -32,11 +42,11 @@ class PDFCreatorApp(App):
         layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
 
         # Title input for adding titles to the PDF
-        self.title_input = TextInput(multiline=False, hint_text='Enter title here', size_hint_y=None, height=40)
+        self.title_input = CustomTextInput(multiline=False, hint_text='Enter title here', size_hint_y=None, height=40)
         layout.add_widget(self.title_input)
 
         # Text input for adding text to the PDF
-        self.text_input = TextInput(multiline=True, hint_text='Enter text here', size_hint_y=0.4)
+        self.text_input = CustomTextInput(multiline=True, hint_text='Enter text here', size_hint_y=0.4)
         layout.add_widget(self.text_input)
 
         # File chooser for selecting images
@@ -195,7 +205,7 @@ class PDFCreatorApp(App):
     def edit_pages(self, instance):
         """Edit pages after they are created."""
         content = BoxLayout(orientation='vertical', padding=10, spacing=10)
-        edit_text_input = TextInput(multiline=True, hint_text='Edit text here')
+        edit_text_input = CustomTextInput(multiline=True, hint_text='Edit text here')
         content.add_widget(edit_text_input)
         save_btn = Button(text='Save Changes', size_hint_y=None, height=40)
         content.add_widget(save_btn)
