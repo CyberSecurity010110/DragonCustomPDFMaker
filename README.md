@@ -28,20 +28,14 @@ Installation Steps
 
     Clone the Repository:
 
-bash
-
 git clone https://github.com/yourusername/custompdfmaker.git
 cd custompdfmaker
 
 Install Dependencies:
 
-bash
-
 pip install kivy fpdf pyenchant
 
 Run the Application:
-
-bash
 
     python custompdfmaker.py
 
@@ -65,6 +59,7 @@ Contributions are welcome! Please fork the repository and create a pull request 
 License
 
 This project is licensed under the MIT License.
+
 Example Usage
 
 python
