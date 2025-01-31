@@ -1,5 +1,4 @@
-# Custom PDF Maker
- Custom PDF Maker
+Custom PDF Maker
 Overview
 
 Custom PDF Maker is a user-friendly application designed to create custom PDFs with ease. The application provides a graphical user interface (GUI) that allows users to input text, upload images, and save the final document as a PDF. It includes features such as spell checking, title labeling, light/dark mode, and the ability to edit pages after they are created.
@@ -15,6 +14,8 @@ Features
     Automatic Page Layout: Automatically handle page layout with no size limits.
     PDF Size Estimation: Display an estimation of the PDF size, updated each time text or an image is added.
     Clipboard Friendly: Support for copy/paste operations.
+    Text Color Options: Choose text color using a color picker.
+    Progress Bar: Display progress for large file operations.
 
 Installation
 Prerequisites
@@ -28,14 +29,20 @@ Installation Steps
 
     Clone the Repository:
 
-git clone https://github.com/CyberSecurity010110/custompdfmaker.git
+bash
+
+git clone https://github.com/yourusername/custompdfmaker.git
 cd custompdfmaker
 
 Install Dependencies:
 
+bash
+
 pip install kivy fpdf pyenchant
 
 Run the Application:
+
+bash
 
     python custompdfmaker.py
 
@@ -48,6 +55,8 @@ Usage
     Edit Pages: Click the "Edit Pages" button to edit pages after they are created.
     Light/Dark Mode: Use the switch to toggle between light and dark modes.
     Save PDF: Click the "Save PDF" button to save the document. You can choose the save location and file name.
+    Text Color: Click the "Choose Text Color" button to select a text color.
+    Progress Bar: Monitor the progress of large file operations.
 
 Code Structure
 
